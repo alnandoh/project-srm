@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role'
     ];
 
     /**
@@ -42,4 +43,49 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return in_array($this->role, ['admin', 'vendor']);
+    }
+
+    public function vendorCompany()
+    {
+        return $this->hasOne(VendorCompany::class, 'vendor_id');
+    }
+
+    public function vendorBankAccount()
+    {
+        return $this->hasMany(VendorBankAccount::class, 'vendor_id');
+    }
+
+    public function offering()
+    {
+        return $this->hasMany(Offering::class, 'vendor_id');
+    }
+
+    public function delivery()
+    {
+        return $this->hasMany(Delivery::class, 'vendor_id');
+    }
+
+    public function payment()
+    {
+        return $this->hasMany(Payment::class, 'vendor_id');
+    }
+
+    public function rating()
+    {
+        return $this->hasMany(Rating::class, 'vendor_id');
+    }
+
+    public function adminTenders()
+    {
+        return $this->hasMany(Tender::class, 'admin_id');
+    }
+
+    public function adminPayments()
+    {
+        return $this->hasMany(Payment::class, 'admin_id');
+    }
 }
