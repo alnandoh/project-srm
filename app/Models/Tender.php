@@ -17,6 +17,7 @@ class Tender extends Model
         'food_type',
         'budget',
         'note',
+        'unit',
         'quantity',
         'end_registration',
         'delivery_date'

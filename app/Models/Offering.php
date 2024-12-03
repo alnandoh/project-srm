@@ -15,17 +15,13 @@ class Offering extends Model
         'vendor_id',
         'title',
         'description',
-        'quantity',
-        'unit_price',
-        'total_price',
+        'offer',
         'image',
-        'offering_status',
-        'payment_file'
+        'offering_status'
     ];
 
     protected $casts = [
-        'unit_price' => 'decimal:2',
-        'total_price' => 'decimal:2'
+        'offer' => 'decimal:2'
     ];
 
     public function tender()
