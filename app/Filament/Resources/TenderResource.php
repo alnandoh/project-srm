@@ -17,7 +17,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Columns\TextColumn;
-
+use Carbon\Carbon;
 class TenderResource extends Resource
 {
     protected static ?string $model = Tender::class;
@@ -36,12 +36,18 @@ class TenderResource extends Resource
                     ->maxLength(100),
                 TextInput::make('special_preference')
                     ->maxLength(255),
-                TextInput::make('food_type')
+                Select::make('food_type')
                     ->required()
-                    ->maxLength(100),
+                    ->options([
+                        'vegetables' => 'Vegetables',
+                        'meat' => 'Meat',
+                    ])
+                    ->searchable(),
                 TextInput::make('budget')
                     ->required()
                     ->numeric()
+                    ->minValue(1000000)
+                    ->maxValue(2000000)
                     ->prefix('IDR'),
                 Textarea::make('note')
                     ->maxLength(255),
@@ -49,10 +55,13 @@ class TenderResource extends Resource
                     ->required()
                     ->numeric(),
                 DateTimePicker::make('end_registration')
+                    ->minDate(now()->addDays(7)) // Set minimum date to 7 days from today
+                    ->live(onBlur: true)
                     ->required(),
                 DateTimePicker::make('delivery_date')
+                    ->minDate(fn ($get) => Carbon::parse($get('end_registration'))->addDays(7)) // 7 days after end_registration
                     ->required(),
-            ]);
+                    ]);
     }
 
     public static function table(Table $table): Table
@@ -76,6 +85,7 @@ class TenderResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 //
             ])

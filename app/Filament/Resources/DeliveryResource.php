@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\Auth;
 
 class DeliveryResource extends Resource
 {
@@ -52,6 +53,18 @@ class DeliveryResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+             ->modifyQueryUsing(function (Builder $query) {
+                $user = Auth::user();
+                
+                if ($user) {
+                    // Filter offerings by the current user's ID in the vendor_id column
+                    $query->where('vendor_id', $user->id);
+                } else {
+                    // If no user, return no results
+                    $query->whereNull('id');
+                }
+            })
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 //
             ])

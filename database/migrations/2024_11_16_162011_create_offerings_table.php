@@ -19,7 +19,7 @@ return new class extends Migration
             $table->text('description');
             $table->integer('quantity')->unsigned();
             $table->decimal('unit_price', 10, 2);
-            $table->decimal('total_price', 10, 2);
+            $table->decimal('total_price', 10, 2)->default(0);
             $table->string('image', 255)->nullable();
             $table->enum('offering_status', [
                 'pending', 'accepted', 'cancelled', ' completed'

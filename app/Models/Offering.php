@@ -28,6 +28,26 @@ class Offering extends Model
         'total_price' => 'decimal:2'
     ];
 
+    // Ensure total_price is always calculated when quantity or unit_price changes
+    public function setQuantityAttribute($value)
+    {
+        $this->attributes['quantity'] = $value;
+        $this->calculateTotalPrice();
+    }
+
+    public function setUnitPriceAttribute($value)
+    {
+        $this->attributes['unit_price'] = $value;
+        $this->calculateTotalPrice();
+    }
+
+    private function calculateTotalPrice()
+    {
+        $quantity = $this->attributes['quantity'] ?? 0;
+        $unitPrice = $this->attributes['unit_price'] ?? 0;
+        $this->attributes['total_price'] = $quantity * $unitPrice;
+    }
+
     public function tender()
     {
         return $this->belongsTo(Tender::class);
