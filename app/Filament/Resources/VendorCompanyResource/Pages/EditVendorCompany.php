@@ -10,6 +10,11 @@ class EditVendorCompany extends EditRecord
 {
     protected static string $resource = VendorCompanyResource::class;
 
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
     protected function getHeaderActions(): array
     {
         return [

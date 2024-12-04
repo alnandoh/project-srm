@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OfferingResource\Pages;
@@ -11,17 +10,16 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\Auth;
 
 class OfferingResource extends Resource
 {
     protected static ?string $model = Offering::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
@@ -33,23 +31,44 @@ class OfferingResource extends Resource
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
-                    ->required(),
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
                 TextInput::make('title')
                     ->required()
                     ->maxLength(255),
                 Textarea::make('description')
-                    ->maxLength(255),
-                TextInput::make('quantity')
+                    ->maxLength(255)
+                    ->required(),
+                // TextInput::make('quantity')
+                //     ->required()
+                //     ->numeric()
+                //     ->live(onBlur: true)
+                //     ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
+                //         $quantity = $state ?? 0;
+                //         $unitPrice = $get('unit_price') ?? 0;
+                //         $totalPrice = $quantity * $unitPrice;
+                //         $set('total_price', $totalPrice);
+                //     }),
+                // TextInput::make('unit_price')
+                //     ->required()
+                //     ->numeric()
+                //     ->prefix('IDR')
+                //     ->live(onBlur: true)
+                //     ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
+                //         $unitPrice = $state ?? 0;
+                //         $quantity = $get('quantity') ?? 0;
+                //         $totalPrice = $quantity * $unitPrice;
+                //         $set('total_price', $totalPrice);
+                //     }),
+                // TextInput::make('total_price')
+                //     ->required()
+                //     ->numeric()
+                //     ->prefix('IDR')
+                //     ->disabled(),
+                TextInput::make('offer')
                     ->required()
                     ->numeric(),
-                TextInput::make('unit_price')
-                    ->required()
-                    ->numeric()
-                    ->prefix('IDR'),
-                TextInput::make('total_price')
-                    ->required()
-                    ->numeric()
-                    ->prefix('IDR'),
                 FileUpload::make('image')
                     ->image()
                     ->directory('offerings'),
@@ -59,9 +78,10 @@ class OfferingResource extends Resource
                         'accepted' => 'Accepted',
                         'rejected' => 'Rejected',
                     ])
+                    ->default('pending')
                     ->required(),
-                FileUpload::make('payment_file')
-                    ->directory('payments'),
+                // FileUpload::make('payment_file')
+                //     ->directory('payments'),
             ]);
     }
 
@@ -72,15 +92,17 @@ class OfferingResource extends Resource
                 TextColumn::make('tender.name')
                     ->searchable(),
                 TextColumn::make('vendor.name')
+                    ->label('Vendor Name')
+                    ->getStateUsing(fn ($record) => $record->vendor->name)
                     ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
-                TextColumn::make('quantity')
-                    ->numeric(),
-                TextColumn::make('unit_price')
-                    ->money(),
-                TextColumn::make('total_price')
-                    ->money(),
+                // TextColumn::make('quantity')
+                //     ->numeric(),
+                // TextColumn::make('unit_price')
+                //     ->money('IDR'),
+                TextColumn::make('offer')
+                    ->money('IDR'),
                 TextColumn::make('offering_status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -90,8 +112,22 @@ class OfferingResource extends Resource
                     }),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->label('Vendor'),
             ])
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = Auth::user();
+                
+                if ($user) {
+                    // Filter offerings by the current user's ID in the vendor_id column
+                    $query->where('vendor_id', $user->id);
+                } else {
+                    // If no user, return no results
+                    $query->whereNull('id');
+                }
+            })
+            ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])

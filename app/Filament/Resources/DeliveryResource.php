@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\Auth;
 
 class DeliveryResource extends Resource
 {
@@ -31,7 +32,9 @@ class DeliveryResource extends Resource
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
-                    ->required(),
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
                 TextInput::make('shipping_track_number')
                     ->required()
                     ->maxLength(100),
@@ -52,8 +55,11 @@ class DeliveryResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->label('Vendor'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

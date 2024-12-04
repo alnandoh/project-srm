@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\Auth;
 
 class OfferingRelationManager extends RelationManager
 {
@@ -33,19 +34,33 @@ class OfferingRelationManager extends RelationManager
                     ->required()
                     ->maxLength(255),
                 Textarea::make('description')
-                    ->required()
                     ->maxLength(255),
                 TextInput::make('quantity')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
+                        $quantity = $state ?? 0;
+                        $unitPrice = $get('unit_price') ?? 0;
+                        $totalPrice = $quantity * $unitPrice;
+                        $set('total_price', $totalPrice);
+                    }),
                 TextInput::make('unit_price')
                     ->required()
                     ->numeric()
-                    ->prefix('IDR'),
+                    ->prefix('IDR')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
+                        $unitPrice = $state ?? 0;
+                        $quantity = $get('quantity') ?? 0;
+                        $totalPrice = $quantity * $unitPrice;
+                        $set('total_price', $totalPrice);
+                    }),
                 TextInput::make('total_price')
                     ->required()
                     ->numeric()
-                    ->prefix('IDR'),
+                    ->prefix('IDR')
+                    ->disabled(),
                 FileUpload::make('image')
                     ->image()
                     ->directory('offerings'),
@@ -75,11 +90,9 @@ class OfferingRelationManager extends RelationManager
                 TextColumn::make('quantity')
                     ->numeric(),
                 TextColumn::make('unit_price')
-                    ->numeric()
-                    ->prefix('IDR'),
+                    ->money('IDR'),
                 TextColumn::make('total_price')
-                    ->numeric()
-                    ->prefix('IDR'),
+                    ->money('IDR'),
                 TextColumn::make('offering_status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -89,8 +102,22 @@ class OfferingRelationManager extends RelationManager
                     }),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->label('Vendor'),
             ])
+             ->modifyQueryUsing(function (Builder $query) {
+                $user = Auth::user();
+                Log::info('User logged in', ['user_id' => $user->id]);
+                if ($user && $user->vendorCompany) {
+                    // Filter offerings by the current user's vendor company
+                    $query->where('vendor_id', $user->vendorCompany->id);
+                } else {
+                    // If no vendor company, return no results
+                    $query->whereNull('id');
+                }
+            })
+            ->defaultSort('created_at', 'desc')
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
             ])

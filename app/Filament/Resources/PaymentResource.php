@@ -18,6 +18,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
+use Illuminate\Support\Facades\Auth;
 
 class PaymentResource extends Resource
 {
@@ -31,7 +32,9 @@ class PaymentResource extends Resource
             ->schema([
                 Select::make('admin_id')
                     ->relationship('admin', 'name')
-                    ->required(),
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
                 Select::make('tender_id')
                     ->relationship('tender', 'name')
                     ->required(),
@@ -55,15 +58,18 @@ class PaymentResource extends Resource
                 TextColumn::make('vendor.name')
                     ->searchable(),
                 ImageColumn::make('invoice_image'),
-                IconColumn::make('is_payment_done')
+                IconColumn::make('payment_status')
                     ->boolean(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->label('Vendor'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
