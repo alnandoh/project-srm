@@ -32,7 +32,9 @@ class DeliveryResource extends Resource
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
-                    ->required(),
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
                 TextInput::make('shipping_track_number')
                     ->required()
                     ->maxLength(100),
@@ -53,20 +55,11 @@ class DeliveryResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
-             ->modifyQueryUsing(function (Builder $query) {
-                $user = Auth::user();
-                
-                if ($user) {
-                    // Filter offerings by the current user's ID in the vendor_id column
-                    $query->where('vendor_id', $user->id);
-                } else {
-                    // If no user, return no results
-                    $query->whereNull('id');
-                }
-            })
             ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->label('Vendor'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

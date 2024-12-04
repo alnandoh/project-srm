@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('tender_id')->constrained()->onDelete('cascade');
             $table->foreignId('vendor_id')->constrained('users')->onDelete('cascade');
             $table->string('invoice_image', 255)->nullable();
-            $table->decimal('amount', 15, 2);
+            $table->decimal('amount', 15, 2)->default(0);
             $table->boolean('payment_status')->default(false);
             $table->timestamps();
             $table->softDeletes();

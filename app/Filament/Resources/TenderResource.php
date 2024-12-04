@@ -18,6 +18,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Columns\TextColumn;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+
 class TenderResource extends Resource
 {
     protected static ?string $model = Tender::class;
@@ -30,7 +32,9 @@ class TenderResource extends Resource
             ->schema([
                 Select::make('admin_id')
                     ->relationship('admin', 'name')
-                    ->required(),
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(100),
@@ -73,7 +77,7 @@ class TenderResource extends Resource
                 TextColumn::make('food_type')
                     ->searchable(),
                 TextColumn::make('budget')
-                    ->money()
+                    ->money('IDR')
                     ->sortable(),
                 TextColumn::make('quantity')
                     ->numeric()

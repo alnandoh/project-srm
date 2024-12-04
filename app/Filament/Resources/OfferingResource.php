@@ -16,7 +16,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class OfferingResource extends Resource
 {
@@ -32,38 +31,44 @@ class OfferingResource extends Resource
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
-                    ->required(),
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
                 TextInput::make('title')
                     ->required()
                     ->maxLength(255),
                 Textarea::make('description')
-                    ->maxLength(255),
-                TextInput::make('quantity')
+                    ->maxLength(255)
+                    ->required(),
+                // TextInput::make('quantity')
+                //     ->required()
+                //     ->numeric()
+                //     ->live(onBlur: true)
+                //     ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
+                //         $quantity = $state ?? 0;
+                //         $unitPrice = $get('unit_price') ?? 0;
+                //         $totalPrice = $quantity * $unitPrice;
+                //         $set('total_price', $totalPrice);
+                //     }),
+                // TextInput::make('unit_price')
+                //     ->required()
+                //     ->numeric()
+                //     ->prefix('IDR')
+                //     ->live(onBlur: true)
+                //     ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
+                //         $unitPrice = $state ?? 0;
+                //         $quantity = $get('quantity') ?? 0;
+                //         $totalPrice = $quantity * $unitPrice;
+                //         $set('total_price', $totalPrice);
+                //     }),
+                // TextInput::make('total_price')
+                //     ->required()
+                //     ->numeric()
+                //     ->prefix('IDR')
+                //     ->disabled(),
+                TextInput::make('offer')
                     ->required()
-                    ->numeric()
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
-                        $quantity = $state ?? 0;
-                        $unitPrice = $get('unit_price') ?? 0;
-                        $totalPrice = $quantity * $unitPrice;
-                        $set('total_price', $totalPrice);
-                    }),
-                TextInput::make('unit_price')
-                    ->required()
-                    ->numeric()
-                    ->prefix('IDR')
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
-                        $unitPrice = $state ?? 0;
-                        $quantity = $get('quantity') ?? 0;
-                        $totalPrice = $quantity * $unitPrice;
-                        $set('total_price', $totalPrice);
-                    }),
-                TextInput::make('total_price')
-                    ->required()
-                    ->numeric()
-                    ->prefix('IDR')
-                    ->disabled(),
+                    ->numeric(),
                 FileUpload::make('image')
                     ->image()
                     ->directory('offerings'),
@@ -73,9 +78,10 @@ class OfferingResource extends Resource
                         'accepted' => 'Accepted',
                         'rejected' => 'Rejected',
                     ])
+                    ->default('pending')
                     ->required(),
-                FileUpload::make('payment_file')
-                    ->directory('payments'),
+                // FileUpload::make('payment_file')
+                //     ->directory('payments'),
             ]);
     }
 
@@ -91,11 +97,11 @@ class OfferingResource extends Resource
                     ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
-                TextColumn::make('quantity')
-                    ->numeric(),
-                TextColumn::make('unit_price')
-                    ->money('IDR'),
-                TextColumn::make('total_price')
+                // TextColumn::make('quantity')
+                //     ->numeric(),
+                // TextColumn::make('unit_price')
+                //     ->money('IDR'),
+                TextColumn::make('offer')
                     ->money('IDR'),
                 TextColumn::make('offering_status')
                     ->badge()
@@ -110,7 +116,7 @@ class OfferingResource extends Resource
                     ->relationship('vendor', 'name')
                     ->label('Vendor'),
             ])
-             ->modifyQueryUsing(function (Builder $query) {
+            ->modifyQueryUsing(function (Builder $query) {
                 $user = Auth::user();
                 
                 if ($user) {

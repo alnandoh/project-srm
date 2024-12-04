@@ -21,7 +21,7 @@ class RatingPolicy
      */
     public function view(User $user, Rating $rating): bool
     {
-        return true;
+        return $user->role == 'Admin';
     }
 
     /**
@@ -29,7 +29,7 @@ class RatingPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return $user->role == 'Admin';
     }
 
     /**
@@ -37,7 +37,7 @@ class RatingPolicy
      */
     public function update(User $user, Rating $rating): bool
     {
-        return true;
+        return $user->role == 'Admin';
     }
 
     /**
@@ -45,7 +45,7 @@ class RatingPolicy
      */
     public function delete(User $user, Rating $rating): bool
     {
-        return true;
+        return $user->role == 'Admin';
     }
 
     /**
@@ -53,7 +53,7 @@ class RatingPolicy
      */
     public function restore(User $user, Rating $rating): bool
     {
-        return true;
+        return $user->role == 'Admin';
     }
 
     /**
@@ -61,6 +61,6 @@ class RatingPolicy
      */
     public function forceDelete(User $user, Rating $rating): bool
     {
-        return true;
+        return $user->role == 'Admin';
     }
 }
