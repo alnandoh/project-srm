@@ -17,9 +17,10 @@ return new class extends Migration
             $table->string('name', 100);
             $table->string('special_preference', 255)->nullable();
             $table->string('food_type', 100);
-            $table->decimal('budget', 10, 2);
+            $table->decimal('budget', 15, 2);
             $table->text('note')->nullable();
-            $table->integer('quantity')->unsigned();
+            $table->integer('quantity')->unsigned()->nullable();
+            $table->integer('unit')->unsigned()->nullable();
             $table->timestamp('end_registration')->nullable();
             $table->timestamp('delivery_date')->nullable();
             $table->timestamps();

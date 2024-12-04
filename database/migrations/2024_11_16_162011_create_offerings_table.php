@@ -17,14 +17,11 @@ return new class extends Migration
             $table->foreignId('vendor_id')->constrained('users')->onDelete('cascade');
             $table->string('title', 255);
             $table->text('description');
-            $table->integer('quantity')->unsigned();
-            $table->decimal('unit_price', 10, 2);
-            $table->decimal('total_price', 10, 2)->default(0);
+            $table->decimal('offer', 15, 2);
             $table->string('image', 255)->nullable();
             $table->enum('offering_status', [
                 'pending', 'accepted', 'cancelled', ' completed'
             ])->default('pending');
-            $table->string('payment_file', 255)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

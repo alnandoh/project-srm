@@ -46,7 +46,7 @@ class User extends Authenticatable
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array($this->role, ['admin', 'vendor']);
+        return in_array($this->role, ['Admin', 'Vendor']);
     }
 
     public function vendorCompany()
