@@ -24,6 +24,34 @@ class OfferingResource extends Resource
 
     public static function form(Form $form): Form
     {
+        $user = auth()->user();
+
+        if ($user->role === 'Admin') {
+            // Admin can only update status
+            return $form->schema([
+                Select::make('tender_id')
+                    ->relationship('tender', 'name')
+                    ->disabled(),
+                Select::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->disabled(),
+                TextInput::make('title')
+                    ->disabled(),
+                Textarea::make('description')
+                    ->disabled(),
+                TextInput::make('offer')
+                    ->disabled(),
+                FileUpload::make('image')                    
+                    ->disabled(),
+                Select::make('offering_status')
+                    ->options([
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
+                    ])
+                    ->required(),
+            ]);
+        }
+        
         return $form
             ->schema([
                 Select::make('tender_id')
@@ -74,11 +102,12 @@ class OfferingResource extends Resource
                     ->directory('offerings'),
                 Select::make('offering_status')
                     ->options([
-                        'pending' => 'Pending',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
+                        'Pending' => 'Pending',
+                        'Accepted' => 'Accepted',
+                        'Rejected' => 'Rejected',
                     ])
                     ->default('pending')
+                    ->hidden()
                     ->required(),
                 // FileUpload::make('payment_file')
                 //     ->directory('payments'),
@@ -118,18 +147,15 @@ class OfferingResource extends Resource
             ])
             ->modifyQueryUsing(function (Builder $query) {
                 $user = Auth::user();
-                
-                if ($user) {
+                if ($user->role === 'Vendor') {
                     // Filter offerings by the current user's ID in the vendor_id column
                     $query->where('vendor_id', $user->id);
-                } else {
-                    // If no user, return no results
-                    $query->whereNull('id');
                 }
             })
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

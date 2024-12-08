@@ -43,8 +43,10 @@ class TenderResource extends Resource
                 Select::make('food_type')
                     ->required()
                     ->options([
-                        'vegetables' => 'Vegetables',
+                        'vegetable' => 'Vegetable',
                         'meat' => 'Meat',
+                        'spice' => 'Spice',
+                        'dairy' => 'Dairy',
                     ])
                     ->searchable(),
                 TextInput::make('budget')
@@ -79,14 +81,15 @@ class TenderResource extends Resource
                 TextColumn::make('budget')
                     ->money('IDR')
                     ->sortable(),
+                TextColumn::make('note'),
                 TextColumn::make('quantity')
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('end_registration')
-                    ->dateTime()
+                    ->date()
                     ->sortable(),
                 TextColumn::make('delivery_date')
-                    ->dateTime()
+                    ->date()
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
@@ -95,6 +98,7 @@ class TenderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
