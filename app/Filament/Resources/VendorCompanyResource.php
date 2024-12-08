@@ -48,6 +48,13 @@ class VendorCompanyResource extends Resource
             ->filters([
                 //
             ])
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = auth()->user();
+                
+                if ($user->role === 'Vendor') {
+                    $query->where('vendor_id', $user->id);
+                }
+            })
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make(),
