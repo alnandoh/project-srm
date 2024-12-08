@@ -37,6 +37,7 @@ class Register extends BaseRegister
                 'vendor' => 'Vendor',
             ])
             ->default('vendor')
+            ->hidden()
             ->required();
     }
 }
