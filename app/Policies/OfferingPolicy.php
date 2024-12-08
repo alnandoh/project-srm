@@ -13,7 +13,7 @@ class OfferingPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role == 'Vendor';    
+        return true;    
     }
 
     /**
@@ -21,7 +21,7 @@ class OfferingPolicy
      */
     public function view(User $user, Offering $offering): bool
     {
-        return $user->role == 'Vendor';    
+        return true;    
     }
 
     /**
@@ -37,7 +37,13 @@ class OfferingPolicy
      */
     public function update(User $user, Offering $offering): bool
     {
-        return $user->role == 'Vendor';    
+        // Vendors can update their own offerings
+        if ($user->role === 'Vendor') {
+            return $user->id === $offering->vendor_id;
+        }
+        
+        // Admins can only update status (handled in the form configuration)
+        return $user->role === 'Admin';    
     }
 
     /**
