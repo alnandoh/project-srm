@@ -29,7 +29,14 @@ class DeliveryPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role == 'Vendor';    
+        if ($user->role !== 'Vendor') {
+            return false;
+        }
+
+        // Check if vendor has any accepted offerings
+        return $user->offering()
+            ->where('offering_status', 'accepted')
+            ->exists();
     }
 
     /**
@@ -37,7 +44,7 @@ class DeliveryPolicy
      */
     public function update(User $user, Delivery $delivery): bool
     {
-        return $user->role == 'Vendor';    
+        return $user->role === 'Vendor' && $user->id === $delivery->vendor_id;
     }
 
     /**
@@ -45,7 +52,7 @@ class DeliveryPolicy
      */
     public function delete(User $user, Delivery $delivery): bool
     {
-        return $user->role == 'Vendor';    
+        return $user->role === 'Vendor' && $user->id === $delivery->vendor_id;
     }
 
     /**
@@ -53,7 +60,7 @@ class DeliveryPolicy
      */
     public function restore(User $user, Delivery $delivery): bool
     {
-        return $user->role == 'Vendor';    
+        return $user->role === 'Vendor' && $user->id === $delivery->vendor_id;
     }
 
     /**
@@ -61,6 +68,6 @@ class DeliveryPolicy
      */
     public function forceDelete(User $user, Delivery $delivery): bool
     {
-        return $user->role == 'Vendor';    
+        return $user->role === 'Vendor' && $user->id === $delivery->vendor_id;
     }
 }

@@ -25,19 +25,33 @@ class DeliveryResource extends Resource
 
     public static function form(Form $form): Form
     {
+        $user = auth()->user();
+        
         return $form
             ->schema([
                 Select::make('tender_id')
-                    ->relationship('tender', 'name')
+                    ->relationship(
+                        'tender',
+                        'name',
+                        function (Builder $query) use ($user) {
+                            if ($user->role === 'Vendor') {
+                                // Only show tenders where the vendor has accepted offerings
+                                $query->whereHas('offering', function ($query) use ($user) {
+                                    $query->where('vendor_id', $user->id)
+                                        ->where('offering_status', 'accepted');
+                                });
+                            }
+                        }
+                    )
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
-                    ->default(fn () => Auth::id())
-                    ->required()
-                    ->hidden(),
+                    ->default(fn () => $user->role === 'Vendor' ? $user->id : null)
+                    ->disabled($user->role === 'Vendor')
+                    ->required(),
                 TextInput::make('shipping_track_number')
                     ->required()
-                    ->maxLength(100),
+                    ->maxLength(255),
             ]);
     }
 
