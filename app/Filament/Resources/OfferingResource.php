@@ -56,6 +56,7 @@ class OfferingResource extends Resource
             ->schema([
                 Select::make('tender_id')
                     ->relationship('tender', 'name')
+                    ->default(request()->query('tender_id'))
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
