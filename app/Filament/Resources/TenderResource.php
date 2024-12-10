@@ -112,7 +112,7 @@ class TenderResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // RelationManagers\OfferingRelationManager::class,
+            RelationManagers\OfferingRelationManager::class,
             // RelationManagers\DeliveryRelationManager::class,
             // RelationManagers\PaymentRelationManager::class,
         ];

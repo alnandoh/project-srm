@@ -44,6 +44,11 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    public function vendorRatings()
+    {
+        return $this->hasMany(Rating::class, 'vendor_id');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return in_array($this->role, ['Admin', 'Vendor']);
