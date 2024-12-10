@@ -19,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class PaymentResource extends Resource
 {
@@ -43,7 +44,9 @@ class PaymentResource extends Resource
                     ->required(),
                 FileUpload::make('invoice_image')
                     ->image()
-                    ->directory('invoices'),
+                    ->directory('invoices')
+                    ->disk('public')
+                    ->storeFiles(true),
                 Toggle::make('payment_status')
                     ->required(),
             ]);
@@ -57,7 +60,13 @@ class PaymentResource extends Resource
                     ->searchable(),
                 TextColumn::make('vendor.name')
                     ->searchable(),
-                ImageColumn::make('invoice_image'),
+                ImageColumn::make('invoice_image')
+                    ->getStateUsing(fn ($record) => $record->invoice_image)
+                    ->url(fn ($record) => $record->invoice_image 
+                        ? Storage::url($record->invoice_image) 
+                        : null)
+                    ->width(100)
+                    ->height(100),
                 IconColumn::make('payment_status')
                     ->boolean(),
                 TextColumn::make('created_at')

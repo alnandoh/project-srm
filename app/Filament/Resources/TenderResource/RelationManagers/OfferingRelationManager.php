@@ -108,7 +108,6 @@ class OfferingRelationManager extends RelationManager
             ])
              ->modifyQueryUsing(function (Builder $query) {
                 $user = Auth::user();
-                Log::info('User logged in', ['user_id' => $user->id]);
                 if ($user && $user->vendorCompany) {
                     // Filter offerings by the current user's vendor company
                     $query->where('vendor_id', $user->vendorCompany->id);

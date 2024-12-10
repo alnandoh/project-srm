@@ -19,6 +19,8 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Tables\Columns\TextColumn;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Filament\Actions\Action;
+use Filament\Tables\Actions\Action as TableAction;
 
 class TenderResource extends Resource
 {
@@ -111,8 +113,8 @@ class TenderResource extends Resource
     {
         return [
             RelationManagers\OfferingRelationManager::class,
-            RelationManagers\DeliveryRelationManager::class,
-            RelationManagers\PaymentRelationManager::class,
+            // RelationManagers\DeliveryRelationManager::class,
+            // RelationManagers\PaymentRelationManager::class,
         ];
     }
 
@@ -122,6 +124,7 @@ class TenderResource extends Resource
             'index' => Pages\ListTenders::route('/'),
             'create' => Pages\CreateTender::route('/create'),
             'edit' => Pages\EditTender::route('/{record}/edit'),
+            'view' => Pages\ViewTender::route('/{record}'),
         ];
     }
 }

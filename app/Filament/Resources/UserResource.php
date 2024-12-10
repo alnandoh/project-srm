@@ -62,6 +62,33 @@ class UserResource extends Resource
                         'vendor' => 'primary',
                         default => 'gray',
                     }),
+                TextColumn::make('vendor_rating')
+                ->label('Vendor Rating')
+                ->getStateUsing(function ($record) {
+                    // Check if the user is a vendor
+                    if ($record->role === 'vendor') {
+                        // Assuming you have a relationship method named 'vendorRatings'
+                        // This calculates the average rating
+                        $avgRating = $record->vendorRatings()
+                            ->selectRaw('AVG((work_quality + timelines + communication) / 3) as avg_rating')
+                            ->value('avg_rating');
+                        
+                        return $avgRating ? number_format($avgRating, 1) : 'N/A';
+                    }
+                    return 'N/A';
+                })
+                // Optional: Add color based on rating
+                ->color(function ($record) {
+                    if ($record->role === 'vendor') {
+                        $avgRating = $record->vendorRatings()->avg('rating');
+                        
+                        if ($avgRating >= 4.5) return 'success';
+                        if ($avgRating >= 3.5) return 'primary';
+                        if ($avgRating >= 2.5) return 'warning';
+                        return 'danger';
+                    }
+                    return 'gray';
+                }),
             ])
             ->filters([
                 //
