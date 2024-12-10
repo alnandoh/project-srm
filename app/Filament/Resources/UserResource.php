@@ -66,7 +66,7 @@ class UserResource extends Resource
                 ->label('Vendor Rating')
                 ->getStateUsing(function ($record) {
                     // Check if the user is a vendor
-                    if ($record->role === 'vendor') {
+                    if ($record->role === 'Vendor') {
                         // Assuming you have a relationship method named 'vendorRatings'
                         // This calculates the average rating
                         $avgRating = $record->vendorRatings()
