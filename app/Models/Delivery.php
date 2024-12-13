@@ -15,7 +15,8 @@ class Delivery extends Model
     protected $fillable = [
         'tender_id',
         'vendor_id',
-        'shipping_track_number'
+        'shipping_track_number',
+        'courier'
     ];
 
     public function tender()

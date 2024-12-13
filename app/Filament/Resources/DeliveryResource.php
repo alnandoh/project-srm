@@ -52,6 +52,15 @@ class DeliveryResource extends Resource
                 TextInput::make('shipping_track_number')
                     ->required()
                     ->maxLength(255),
+                Select::make('courier')
+                    ->required()
+                    ->options([
+                        'courier1' => 'Courier 1',
+                        'courier2' => 'Courier 2',
+                        'courier3' => 'Courier 3',
+                        'courier4' => 'Courier 4',
+                    ])
+                    ->searchable(),
             ]);
     }
 
@@ -65,6 +74,7 @@ class DeliveryResource extends Resource
                     ->searchable(),
                 TextColumn::make('shipping_track_number')
                     ->searchable(),
+                TextColumn::make('courier'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),

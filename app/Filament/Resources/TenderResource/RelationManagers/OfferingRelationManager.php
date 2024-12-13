@@ -15,66 +15,12 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Auth;
+use Filament\Tables\Actions\Action;
+use App\Models\Offering;
 
 class OfferingRelationManager extends RelationManager
 {
     protected static string $relationship = 'offering';
-
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Select::make('tender_id')
-                    ->relationship('tender', 'name')
-                    ->required(),
-                Select::make('vendor_id')
-                    ->relationship('vendor', 'name')
-                    ->required(),
-                TextInput::make('title')
-                    ->required()
-                    ->maxLength(255),
-                Textarea::make('description')
-                    ->maxLength(255),
-                TextInput::make('quantity')
-                    ->required()
-                    ->numeric()
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
-                        $quantity = $state ?? 0;
-                        $unitPrice = $get('unit_price') ?? 0;
-                        $totalPrice = $quantity * $unitPrice;
-                        $set('total_price', $totalPrice);
-                    }),
-                TextInput::make('unit_price')
-                    ->required()
-                    ->numeric()
-                    ->prefix('IDR')
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
-                        $unitPrice = $state ?? 0;
-                        $quantity = $get('quantity') ?? 0;
-                        $totalPrice = $quantity * $unitPrice;
-                        $set('total_price', $totalPrice);
-                    }),
-                TextInput::make('total_price')
-                    ->required()
-                    ->numeric()
-                    ->prefix('IDR')
-                    ->disabled(),
-                FileUpload::make('image')
-                    ->image()
-                    ->directory('offerings'),
-                Select::make('offering_status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
-                    ])
-                    ->required(),
-                FileUpload::make('payment_file')
-                    ->directory('payments'),
-            ]);
-    }
 
     public function table(Table $table): Table
     {
@@ -84,14 +30,12 @@ class OfferingRelationManager extends RelationManager
                 TextColumn::make('tender.name')
                     ->searchable(),
                 TextColumn::make('vendor.name')
+                    ->label('Vendor Name')
+                    ->getStateUsing(fn ($record) => $record->vendor->name)
                     ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
-                TextColumn::make('quantity')
-                    ->numeric(),
-                TextColumn::make('unit_price')
-                    ->money('IDR'),
-                TextColumn::make('total_price')
+                TextColumn::make('offer')
                     ->money('IDR'),
                 TextColumn::make('offering_status')
                     ->badge()
@@ -108,12 +52,8 @@ class OfferingRelationManager extends RelationManager
             ])
              ->modifyQueryUsing(function (Builder $query) {
                 $user = Auth::user();
-                if ($user && $user->vendorCompany) {
-                    // Filter offerings by the current user's vendor company
-                    $query->where('vendor_id', $user->vendorCompany->id);
-                } else {
-                    // If no vendor company, return no results
-                    $query->whereNull('id');
+                if ($user->role === 'Vendor') {
+                    $query->where('vendor_id', $user->id);
                 }
             })
             ->defaultSort('created_at', 'desc')
@@ -123,6 +63,32 @@ class OfferingRelationManager extends RelationManager
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+                Action::make('accept')
+                    ->label('Accept')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $offerings = Offering::where('tender_id', $record->tender_id)->get();
+
+                        \DB::transaction(function () use ($record, $offerings) {
+                            $record->update(['offering_status' => 'accepted']);
+
+                            foreach ($offerings as $offering) {
+                                if ($offering->id !== $record->id) {
+                                    $offering->update(['offering_status' => 'cancelled']);
+                                }
+                            }
+                        });
+                    })
+                    ->visible(fn ($record) => $record->offering_status === 'pending'),
+                Action::make('cancel')
+                    ->label('Cancel')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $record->update(['offering_status' => 'cancelled']);
+                    })
+                    ->visible(fn ($record) => $record->offering_status === 'pending'),            
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
