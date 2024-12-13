@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('tender_id')->constrained()->onDelete('cascade');
             $table->foreignId('vendor_id')->constrained('users')->onDelete('cascade');
             $table->string('shipping_track_number', 100);
+            $table->string('courier', 100);
             $table->string('recipient_name', 100)->nullable();
             $table->string('recipient_phone', 50)->nullable();
             $table->timestamps();
