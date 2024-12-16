@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 class RatingResource extends Resource
 {
     protected static ?string $model = Rating::class;
-
+    protected static ?int $navigationSort = 5;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

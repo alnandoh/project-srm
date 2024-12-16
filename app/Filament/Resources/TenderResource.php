@@ -25,7 +25,7 @@ use Filament\Tables\Actions\Action as TableAction;
 class TenderResource extends Resource
 {
     protected static ?string $model = Tender::class;
-
+    protected static ?int $navigationSort = 1;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
@@ -54,8 +54,6 @@ class TenderResource extends Resource
                 TextInput::make('budget')
                     ->required()
                     ->numeric()
-                    ->minValue(1000000)
-                    ->maxValue(2000000)
                     ->prefix('IDR'),
                 Textarea::make('note')
                     ->maxLength(255),

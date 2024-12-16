@@ -22,6 +22,7 @@ class DeliveryResource extends Resource
     protected static ?string $model = Delivery::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
     {
@@ -85,6 +86,13 @@ class DeliveryResource extends Resource
                     ->relationship('vendor', 'name')
                     ->label('Vendor'),
             ])
+            ->modifyQueryUsing(function (Builder $query) {
+                $user = Auth::user();
+                if ($user->role === 'Vendor') {
+                    // Filter offerings by the current user's ID in the vendor_id column
+                    $query->where('vendor_id', $user->id);
+                }
+            })
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
