@@ -10,43 +10,31 @@ class VendorCompanyPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->role == 'Vendor';
     }
 
     public function view(User $user, VendorCompany $vendorCompany): bool
     {
-        if ($user->role === 'Admin') {
-            return true;
-        }
-        
-        return $user->id === $vendorCompany->vendor_id;
+        return $user->role == 'Vendor';
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->role == 'Vendor';
     }
 
     public function update(User $user, VendorCompany $vendorCompany): bool
     {
-        if ($user->role === 'Admin') {
-            return true;
-        }
-        
-        return $user->id === $vendorCompany->vendor_id;
+        return $user->role === 'Vendor' && $user->id === $vendorCompany->vendor_id;
     }
 
     public function delete(User $user, VendorCompany $vendorCompany): bool
     {
-        if ($user->role === 'Admin') {
-            return true;
-        }
-        
-        return $user->id === $vendorCompany->vendor_id;
+        return $user->role === 'Vendor' && $user->id === $vendorCompany->vendor_id;
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->role === 'Admin';
+        return $user->role === 'Vendor';
     }
 } 
