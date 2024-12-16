@@ -16,11 +16,16 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Exists;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Get;
+use Filament\Tables\Actions\Action;
 
 class OfferingResource extends Resource
 {
     protected static ?string $model = Offering::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
@@ -57,7 +62,15 @@ class OfferingResource extends Resource
                 Select::make('tender_id')
                     ->relationship('tender', 'name')
                     ->default(request()->query('tender_id'))
-                    ->required(),
+                    ->required()
+                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                        if ($state) {
+                            $tender = \App\Models\Tender::find($state);
+                            if ($tender) {
+                                $set('max_budget', $tender->budget);
+                            }
+                        }
+                    }),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
                     ->default(fn () => Auth::id())
@@ -97,15 +110,27 @@ class OfferingResource extends Resource
                 //     ->disabled(),
                 TextInput::make('offer')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->rules([
+                        function (Forms\Get $get) {
+                            return function ($attribute, $value, $fail) use ($get) {
+                                $maxBudget = $get('max_budget');
+                                if ($value > $maxBudget) {
+                                    $fail("The offer cannot exceed the tender budget of IDR " . number_format($maxBudget, 2));
+                                }
+                            };
+                        }
+                    ])
+                    ->prefix('IDR'),
+                Hidden::make('max_budget'),
                 FileUpload::make('image')
                     ->image()
                     ->directory('offerings'),
                 Select::make('offering_status')
                     ->options([
-                        'Pending' => 'Pending',
-                        'Accepted' => 'Accepted',
-                        'Rejected' => 'Rejected',
+                        'pending' => 'Pending',
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
                     ])
                     ->default('pending')
                     ->hidden()
@@ -156,8 +181,41 @@ class OfferingResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
-                Tables\Actions\ViewAction::make(),
+                    ->visible(fn (Offering $record) => $record->offering_status !== 'accepted'),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Offering $record) => $record->offering_status !== 'accepted'),
+                Action::make('accept')
+                    ->label('Accept')
+                    ->color('success')
+                    ->icon('heroicon-o-check')
+                    ->requiresConfirmation()
+                    ->visible(fn (Offering $record) => 
+                        auth()->user()->role === 'Admin' && 
+                        $record->offering_status === 'pending'
+                    )
+                    ->action(function (Offering $record) {
+                        $offerings = Offering::where('tender_id', $record->tender_id)->get();
+
+                        \DB::transaction(function () use ($record, $offerings) {
+                            $record->update(['offering_status' => 'accepted']);
+
+                            foreach ($offerings as $offering) {
+                                if ($offering->id !== $record->id) {
+                                    $offering->update(['offering_status' => 'cancelled']);
+                                }
+                            }
+                        });
+                    }),
+                Action::make('create_delivery')
+                    ->label('Create Delivery')
+                    ->color('primary')
+                    ->icon('heroicon-o-truck')
+                    ->url(fn (Offering $record) => route('filament.admin.resources.deliveries.create', ['tender_id' => $record->tender_id]))
+                    ->visible(fn (Offering $record) => 
+                        auth()->user()->role === 'Vendor' && 
+                        $record->offering_status === 'accepted' &&
+                        $record->vendor_id === auth()->id()
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
