@@ -33,10 +33,10 @@ class Register extends BaseRegister
     {
         return Select::make('role')
             ->options([
-                'admin' => 'Admin',
-                'vendor' => 'Vendor',
+                'Admin' => 'Admin',
+                'Vendor' => 'Vendor',
             ])
-            ->default('vendor')
+            ->default('Vendor')
             ->hidden()
             ->required();
     }
