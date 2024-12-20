@@ -14,6 +14,7 @@ class Payment extends Model
         'admin_id',
         'tender_id',
         'vendor_id',
+        'delivery_id',
         'amount',
         'invoice_image',
         'payment_status'
@@ -33,5 +34,16 @@ class Payment extends Model
     public function vendor()
     {
         return $this->belongsTo(User::class, 'vendor_id');
+    }
+
+    public function rating()
+    {
+        return $this->hasOne(Rating::class, 'tender_id', 'tender_id')
+            ->where('ratings.vendor_id', $this->vendor_id);
+    }
+
+    public function delivery()
+    {
+        return $this->belongsTo(Delivery::class);
     }
 }

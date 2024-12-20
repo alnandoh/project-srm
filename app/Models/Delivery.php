@@ -15,8 +15,10 @@ class Delivery extends Model
     protected $fillable = [
         'tender_id',
         'vendor_id',
+        'offering_id',
         'shipping_track_number',
-        'courier'
+        'courier',
+        'status',
     ];
 
     public function tender()
@@ -27,5 +29,16 @@ class Delivery extends Model
     public function vendor()
     {
         return $this->belongsTo(User::class, 'vendor_id');
+    }
+
+    public function offering()
+    {
+        return $this->belongsTo(Offering::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'tender_id', 'tender_id')
+            ->where('payments.vendor_id', $this->vendor_id);
     }
 }

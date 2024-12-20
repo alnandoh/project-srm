@@ -58,4 +58,9 @@ class Offering extends Model
     {
         return $this->hasOne(Rating::class);
     }
+
+    public function delivery()
+    {
+        return $this->hasOne(Delivery::class);
+    }
 }
