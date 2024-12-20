@@ -16,6 +16,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Components\Hidden;
+use App\Filament\Resources\DeliveryResource\Pages\ViewDelivery;
 
 class DeliveryResource extends Resource
 {
@@ -27,6 +29,8 @@ class DeliveryResource extends Resource
     public static function form(Form $form): Form
     {
         $user = auth()->user();
+        $tenderId = request()->query('tender_id');
+        $isEdit = $form->getOperation() === 'edit';
         
         return $form
             ->schema([
@@ -36,7 +40,6 @@ class DeliveryResource extends Resource
                         'name',
                         function (Builder $query) use ($user) {
                             if ($user->role === 'Vendor') {
-                                // Only show tenders where the vendor has accepted offerings
                                 $query->whereHas('offering', function ($query) use ($user) {
                                     $query->where('vendor_id', $user->id)
                                         ->where('offering_status', 'accepted');
@@ -44,24 +47,53 @@ class DeliveryResource extends Resource
                             }
                         }
                     )
-                    ->required(),
+                    ->default($tenderId)
+                    ->required()
+                    ->disabled(fn () => $tenderId !== null || $isEdit)
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $offering = \App\Models\Offering::where('tender_id', $state)
+                                ->where('vendor_id', auth()->id())
+                                ->where('offering_status', 'accepted')
+                                ->first();
+                            
+                            if ($offering) {
+                                $set('offering_id', $offering->id);
+                            }
+                        }
+                    }),
+
+                Hidden::make('offering_id'),
+
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
                     ->default(fn () => $user->role === 'Vendor' ? $user->id : null)
-                    ->disabled($user->role === 'Vendor')
-                    ->required(),
+                    ->required()
+                    ->disabled(fn () => $user->role === 'Vendor' || $isEdit),
                 TextInput::make('shipping_track_number')
                     ->required()
                     ->maxLength(255),
                 Select::make('courier')
-                    ->required()
                     ->options([
-                        'courier1' => 'Courier 1',
-                        'courier2' => 'Courier 2',
-                        'courier3' => 'Courier 3',
-                        'courier4' => 'Courier 4',
+                        'JNE' => 'JNE',
+                        'JNT' => 'J&T',
+                        'SICEPAT' => 'SiCepat',
+                        'ANTERAJA' => 'AnterAja',
+                        'POS' => 'POS Indonesia',
                     ])
-                    ->searchable(),
+                    ->searchable()
+                    ->required(),
+
+                Select::make('status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'accepted' => 'Accepted',
+                        'rejected' => 'Rejected',
+                    ])
+                    ->default('pending')
+                    ->required()
+                    ->visible($user->role === 'Admin')
+                    ->disabled($user->role !== 'Admin'),
             ]);
     }
 
@@ -75,7 +107,8 @@ class DeliveryResource extends Resource
                     ->searchable(),
                 TextColumn::make('shipping_track_number')
                     ->searchable(),
-                TextColumn::make('courier'),
+                TextColumn::make('courier')
+                    ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
@@ -95,7 +128,6 @@ class DeliveryResource extends Resource
             })
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -116,6 +148,7 @@ class DeliveryResource extends Resource
         return [
             'index' => Pages\ListDeliveries::route('/'),
             'create' => Pages\CreateDelivery::route('/create'),
+            'view' => Pages\ViewDelivery::route('/{record}'),
             'edit' => Pages\EditDelivery::route('/{record}/edit'),
         ];
     }

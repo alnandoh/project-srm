@@ -210,12 +210,19 @@ class OfferingResource extends Resource
                     ->label('Create Delivery')
                     ->color('primary')
                     ->icon('heroicon-o-truck')
-                    ->url(fn (Offering $record) => route('filament.admin.resources.deliveries.create', ['tender_id' => $record->tender_id]))
                     ->visible(fn (Offering $record) => 
-                        auth()->user()->role === 'Vendor' && 
-                        $record->offering_status === 'accepted' &&
-                        $record->vendor_id === auth()->id()
-                    ),
+                    auth()->user()->role === 'Vendor' && 
+                    $record->offering_status === 'accepted' &&
+                    $record->vendor_id === auth()->id() && 
+                    !\App\Models\Delivery::where('tender_id', $record->tender_id)
+                             ->where('vendor_id', $record->vendor_id)
+                             ->exists()
+                )
+                    ->url(fn (Offering $record) => route('filament.admin.resources.deliveries.create', [
+                        'tender_id' => $record->tender_id,
+                        'vendor_id' => $record->vendor_id
+                    ]))
+                    ,
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
