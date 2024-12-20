@@ -80,7 +80,9 @@ class OfferingRelationManager extends RelationManager
                             }
                         });
                     })
-                    ->visible(fn ($record) => $record->offering_status === 'pending'),
+                    ->visible(fn ($record) 
+                    =>Auth::user()->role==='Admin'&&
+                    $record->offering_status === 'pending'),
                 Action::make('cancel')
                     ->label('Cancel')
                     ->color('danger')
@@ -88,7 +90,9 @@ class OfferingRelationManager extends RelationManager
                     ->action(function ($record) {
                         $record->update(['offering_status' => 'cancelled']);
                     })
-                    ->visible(fn ($record) => $record->offering_status === 'pending'),            
+                    ->visible(fn ($record) => 
+                    Auth::user()->role==='Admin'&&
+                    $record->offering_status === 'pending'),            
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
