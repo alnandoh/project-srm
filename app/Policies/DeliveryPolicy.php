@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Delivery;
 use App\Models\User;
+use App\Models\Offering;
 use Illuminate\Auth\Access\Response;
 
 class DeliveryPolicy
@@ -33,9 +34,10 @@ class DeliveryPolicy
             return false;
         }
 
-        // Check if vendor has any accepted offerings
-        return $user->offering()
+        // Check if vendor has any accepted offerings without deliveries
+        return Offering::where('vendor_id', $user->id)
             ->where('offering_status', 'accepted')
+            ->whereDoesntHave('delivery')
             ->exists();
     }
 

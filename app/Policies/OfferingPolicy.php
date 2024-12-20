@@ -29,7 +29,7 @@ class OfferingPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === 'Vendor';    
+        return $user->role == 'Vendor';    
     }
 
     /**
@@ -37,17 +37,12 @@ class OfferingPolicy
      */
     public function update(User $user, Offering $offering): bool
     {
-        // Don't allow updates if offering is accepted
-        if ($offering->offering_status === 'accepted') {
-            return false;
-        }
-
-        // Vendors can update their own pending offerings
+        // Vendors can update their own offerings
         if ($user->role === 'Vendor') {
             return $user->id === $offering->vendor_id;
         }
         
-        // Admins can only update status
+        // Admins can only update status (handled in the form configuration)
         return $user->role === 'Admin';    
     }
 
@@ -56,17 +51,12 @@ class OfferingPolicy
      */
     public function delete(User $user, Offering $offering): bool
     {
-        // Don't allow deletion if offering is accepted
-        if ($offering->offering_status === 'accepted') {
-            return false;
-        }
-
-        return $user->role === 'Vendor' && $user->id === $offering->vendor_id;
+        return $user->role == 'Vendor' ;    
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->role === 'Vendor';    
+        return $user->role == 'Vendor';    
     }
 
     /**
