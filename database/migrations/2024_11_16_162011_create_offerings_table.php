@@ -19,8 +19,13 @@ return new class extends Migration
             $table->text('description');
             $table->decimal('offer', 15, 2);
             $table->string('image', 255)->nullable();
+            $table->decimal('delivery_cost', 15, 2);
+            $table->enum('payment_type', ['dp', 'full'])->default('full');
+            $table->decimal('dp_amount', 15, 2)->default(0)->change();
+            $table->boolean('dp_paid')->default(false);
+            $table->boolean('full_paid')->default(false);
             $table->enum('offering_status', [
-                'pending', 'accepted', 'cancelled', ' completed'
+                'pending', 'accepted', 'rejected', 'cancelled', 'completed'
             ])->default('pending');
             $table->timestamps();
             $table->softDeletes();

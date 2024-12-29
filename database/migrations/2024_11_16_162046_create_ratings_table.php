@@ -16,9 +16,12 @@ return new class extends Migration
             $table->foreignId('vendor_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('tender_id')->constrained()->onDelete('cascade');
             $table->foreignId('offering_id')->constrained()->onDelete('cascade');
+            $table->foreignId('delivery_id')->constrained()->onDelete('cascade');
             $table->integer('work_quality')->unsigned()->comment('Rating from 1-5')->default(0);
             $table->integer('timelines')->unsigned()->comment('Rating from 1-5')->default(0);
             $table->integer('communication')->unsigned()->comment('Rating from 1-5')->default(0);
+            $table->enum('rating_type', ['vendor', 'admin'])->default('admin');
+            $table->string('rated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

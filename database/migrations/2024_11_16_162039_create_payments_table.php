@@ -17,7 +17,11 @@ return new class extends Migration
             $table->foreignId('tender_id')->constrained()->onDelete('cascade');
             $table->foreignId('vendor_id')->constrained('users')->onDelete('cascade');
             $table->string('invoice_image', 255)->nullable();
+            $table->foreignId('delivery_id')->nullable()->constrained()->onDelete('set null');
             $table->decimal('amount', 15, 2)->default(0);
+            $table->enum('payment_type', ['dp', 'full'])->default('full');
+            $table->text('payment_notes')->nullable();
+            $table->decimal('dp_amount', 15, 2)->default(0);
             $table->boolean('payment_status')->default(false);
             $table->timestamps();
             $table->softDeletes();

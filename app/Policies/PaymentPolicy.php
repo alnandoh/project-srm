@@ -37,7 +37,13 @@ class PaymentPolicy
      */
     public function update(User $user, Payment $payment): bool
     {
-        return $user->role == 'Admin';
+        if ($user->role === 'Admin') {
+            if ($payment->type === 'full') {
+                return $payment->delivery->qc_status === 'verified';
+            }
+            return true;
+        }
+        return false;
     }
 
     /**

@@ -16,10 +16,18 @@ class Payment extends Model
         'vendor_id',
         'delivery_id',
         'amount',
+        'payment_type',
+        'payment_notes',
+        'dp_amount',
         'invoice_image',
         'payment_status'
     ];
 
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'dp_amount' => 'decimal:2',
+        'payment_status' => 'boolean',
+    ];
 
     public function admin()
     {
@@ -46,4 +54,9 @@ class Payment extends Model
     {
         return $this->belongsTo(Delivery::class);
     }
+
+    public function offering()
+{
+    return $this->belongsTo(Offering::class);
+}
 }

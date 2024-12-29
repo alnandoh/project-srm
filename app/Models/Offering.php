@@ -16,32 +16,51 @@ class Offering extends Model
         'title',
         'description',
         'offer',
+        'delivery_cost',
+        'payment_type',
+        'dp_amount',
+        'dp_paid',
+        'full_paid',
         'image',
         'offering_status'
     ];
 
     protected $casts = [
-        'offer' => 'decimal:2'
+        'offer' => 'decimal:2',
+        'delivery_cost' => 'decimal:2',
+        'dp_amount' => 'decimal:2',
+        'dp_paid' => 'boolean',
+        'full_paid' => 'boolean'
     ];
 
-    // Ensure total_price is always calculated when quantity or unit_price changes
-    public function setQuantityAttribute($value)
+        // Add accessor for total amount
+    public function getTotalAmountAttribute(): float
     {
-        $this->attributes['quantity'] = $value;
-        $this->calculateTotalPrice();
+        return $this->offer + $this->delivery_cost;
     }
 
-    public function setUnitPriceAttribute($value)
+    // Add method to calculate DP amount (30% of total)
+    public function calculateDpAmount(): float
     {
-        $this->attributes['unit_price'] = $value;
-        $this->calculateTotalPrice();
+        return $this->total_amount * 0.3;
     }
 
-    private function calculateTotalPrice()
+    // Override setter for payment_type to automatically set dp_amount
+    public function setPaymentTypeAttribute($value)
     {
-        $quantity = $this->attributes['quantity'] ?? 0;
-        $unitPrice = $this->attributes['unit_price'] ?? 0;
-        $this->attributes['total_price'] = $quantity * $unitPrice;
+        $this->attributes['payment_type'] = $value;
+        if ($value === 'dp') {
+            $this->attributes['dp_amount'] = $this->calculateDpAmount();
+        }
+    }
+
+    // Helper method to check if payment requirements are met for delivery
+    public function isReadyForDelivery(): bool
+    {
+        if ($this->payment_type === 'full') {
+            return $this->full_paid;
+        }
+        return $this->dp_paid;
     }
 
     public function tender()
@@ -62,5 +81,10 @@ class Offering extends Model
     public function delivery()
     {
         return $this->hasOne(Delivery::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class); // Adjust the relationship type as needed
     }
 }

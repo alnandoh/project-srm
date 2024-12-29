@@ -39,9 +39,11 @@ class PaymentResource extends Resource
                     ->hidden(),
                 Select::make('tender_id')
                     ->relationship('tender', 'name')
+                    ->default(request()->query('tender_id'))
                     ->required(),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
+                    ->default(request()->query('vendor_id'))
                     ->required(),
                 FileUpload::make('invoice_image')
                     ->image()

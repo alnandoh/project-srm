@@ -18,6 +18,9 @@ use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Hidden;
 use App\Filament\Resources\DeliveryResource\Pages\ViewDelivery;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Textarea;
 
 class DeliveryResource extends Resource
 {
@@ -43,6 +46,10 @@ class DeliveryResource extends Resource
                                 $query->whereHas('offering', function ($query) use ($user) {
                                     $query->where('vendor_id', $user->id)
                                         ->where('offering_status', 'accepted');
+                                        // ->where(function ($q) {
+                                        //     $q->where('dp_paid', true)
+                                        //       ->orWhere('full_paid', true);
+                                        // });
                                 });
                             }
                         }
@@ -86,14 +93,35 @@ class DeliveryResource extends Resource
 
                 Select::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
+                        'pending_payment' => 'Pending Payment',
+                        'shipped' => 'Shipped',
+                        'delivered' => 'Delivered',
+                        'confirmed' => 'Confirmed',
                     ])
                     ->default('pending')
                     ->required()
                     ->visible($user->role === 'Admin')
                     ->disabled($user->role !== 'Admin'),
+
+                TextInput::make('quantity_received')
+                    ->numeric()
+                    ->visible($user->role === 'Admin'),
+
+                Toggle::make('quality_check')
+                    ->visible($user->role === 'Admin')
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            // Trigger creation of full payment when QC is approved
+                            // Implementation here
+                        }
+                    }),
+
+                Toggle::make('quantity_check')
+                    ->visible($user->role === 'Admin'),
+
+                Textarea::make('qc_notes')
+                    ->visible($user->role === 'Admin'),
             ]);
     }
 
