@@ -19,7 +19,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Exists;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Get;
+use Filament\Forms\Components\Section;
 use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\Grid;
 
 class OfferingResource extends Resource
 {
@@ -45,99 +47,148 @@ class OfferingResource extends Resource
                 Textarea::make('description')
                     ->disabled(),
                 TextInput::make('offer')
-                    ->disabled(),
+                    ->disabled()
+                    ->prefix('IDR'),
+                TextInput::make('delivery_cost')
+                    ->disabled()
+                    ->prefix('IDR'),
                 FileUpload::make('image')                    
                     ->disabled(),
-                Select::make('offering_status')
-                    ->options([
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
-                    ])
-                    ->required(),
+                Section::make('Payment Information')
+                    ->schema([
+                        Select::make('payment_type')
+                            ->options([
+                                'dp' => 'Down Payment',
+                                'full' => 'Full Payment',
+                            ])
+                            ->disabled(),
+                        TextInput::make('dp_amount')
+                            ->prefix('IDR')
+                            ->disabled()
+                            ->visible(fn (Forms\Get $get) => $get('payment_type') === 'dp'),
+                    ]),
+                Section::make('Status')
+                    ->schema([
+                        Select::make('offering_status')
+                            ->options([
+                                'accepted' => 'Accepted',
+                                'rejected' => 'Rejected',
+                            ])
+                            ->required(),
+                    ]),
             ]);
         }
         
         return $form
             ->schema([
-                Select::make('tender_id')
-                    ->relationship('tender', 'name')
-                    ->default(request()->query('tender_id'))
-                    ->required()
-                    ->afterStateUpdated(function ($state, Forms\Set $set) {
-                        if ($state) {
-                            $tender = \App\Models\Tender::find($state);
-                            if ($tender) {
-                                $set('max_budget', $tender->budget);
-                            }
-                        }
-                    }),
-                Select::make('vendor_id')
-                    ->relationship('vendor', 'name')
-                    ->default(fn () => Auth::id())
-                    ->required()
-                    ->hidden(),
-                TextInput::make('title')
-                    ->required()
-                    ->maxLength(255),
-                Textarea::make('description')
-                    ->maxLength(255)
-                    ->required(),
-                // TextInput::make('quantity')
-                //     ->required()
-                //     ->numeric()
-                //     ->live(onBlur: true)
-                //     ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
-                //         $quantity = $state ?? 0;
-                //         $unitPrice = $get('unit_price') ?? 0;
-                //         $totalPrice = $quantity * $unitPrice;
-                //         $set('total_price', $totalPrice);
-                //     }),
-                // TextInput::make('unit_price')
-                //     ->required()
-                //     ->numeric()
-                //     ->prefix('IDR')
-                //     ->live(onBlur: true)
-                //     ->afterStateUpdated(function (TextInput $component, $state, Forms\Set $set, Forms\Get $get) {
-                //         $unitPrice = $state ?? 0;
-                //         $quantity = $get('quantity') ?? 0;
-                //         $totalPrice = $quantity * $unitPrice;
-                //         $set('total_price', $totalPrice);
-                //     }),
-                // TextInput::make('total_price')
-                //     ->required()
-                //     ->numeric()
-                //     ->prefix('IDR')
-                //     ->disabled(),
-                TextInput::make('offer')
-                    ->required()
-                    ->numeric()
-                    ->rules([
-                        function (Forms\Get $get) {
-                            return function ($attribute, $value, $fail) use ($get) {
-                                $maxBudget = $get('max_budget');
-                                if ($value > $maxBudget) {
-                                    $fail("The offer cannot exceed the tender budget of IDR " . number_format($maxBudget, 2));
+                Section::make('Tender Information')
+                    ->schema([
+                        Select::make('tender_id')
+                            ->relationship('tender', 'name')
+                            ->default(request()->query('tender_id'))
+                            ->required()
+                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                if ($state) {
+                                    $tender = \App\Models\Tender::find($state);
+                                    if ($tender) {
+                                        $set('max_budget', $tender->budget);
+                                    }
                                 }
-                            };
-                        }
-                    ])
-                    ->prefix('IDR'),
-                Hidden::make('max_budget'),
-                FileUpload::make('image')
-                    ->image()
-                    ->directory('offerings'),
-                Select::make('offering_status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'accepted' => 'Accepted',
-                        'rejected' => 'Rejected',
-                    ])
-                    ->default('pending')
-                    ->hidden()
-                    ->required(),
-                // FileUpload::make('payment_file')
-                //     ->directory('payments'),
+                            }),
+                        Select::make('vendor_id')
+                            ->relationship('vendor', 'name')
+                            ->default(fn () => Auth::id())
+                            ->required()
+                            ->hidden(),
+                    ]),
+
+                Section::make('Offering Details')
+                    ->schema([
+                        TextInput::make('title')
+                            ->required()
+                            ->maxLength(255),
+                        Textarea::make('description')
+                            ->maxLength(255)
+                            ->required(),
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('offer')
+                                    ->required()
+                                    ->numeric()
+                                    ->prefix('IDR')
+                                    // ->live()
+                                    ->rules([
+                                        function (Forms\Get $get) {
+                                            return function ($attribute, $value, $fail) use ($get) {
+                                                $maxBudget = $get('max_budget');
+                                                if ($value > $maxBudget) {
+                                                    $fail("The offer cannot exceed the tender budget of IDR " . number_format($maxBudget, 2));
+                                                }
+                                            };
+                                        }
+                                    ])
+                                    ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => 
+                                        self::calculateTotalAndDP($state, $get('delivery_cost'), $set)
+                                    ),
+                                TextInput::make('delivery_cost')
+                                    ->required()
+                                    ->numeric()
+                                    ->default(0)
+                                    ->prefix('IDR')
+                                    // ->live()
+                                    ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => 
+                                        self::calculateTotalAndDP($get('offer'), $state, $set)
+                                    ),
+                            ]),
+                        FileUpload::make('image')
+                            ->image()
+                            ->directory('offerings'),
+                    ]),
+
+                Section::make('Payment Details')
+                    ->schema([
+                        Select::make('payment_type')
+                            ->options([
+                                'dp' => 'Down Payment',
+                                'full' => 'Full Payment',
+                            ])
+                            ->default('full')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => 
+                                self::calculateTotalAndDP($get('offer'), $get('delivery_cost'), $set)
+                            ),
+                        TextInput::make('dp_amount')
+                            ->numeric()
+                            ->prefix('IDR')
+                            ->disabled()
+                            ->default(0)
+                            ->live()
+                            ->visible(fn (Forms\Get $get) => $get('payment_type') === 'dp'),
+                        Hidden::make('max_budget'),
+                        Select::make('offering_status')
+                            ->options([
+                                'pending' => 'Pending',
+                                'accepted' => 'Accepted',
+                                'rejected' => 'Rejected',
+                            ])
+                            ->default('pending')
+                            ->hidden()
+                            ->required(),
+                    ]),
             ]);
+    }
+
+    private static function calculateTotalAndDP($offer, $deliveryCost, Forms\Set $set): void
+    {
+        $offer = $offer ?? 0;
+        $deliveryCost = $deliveryCost ?? 0;
+        $total = $offer + $deliveryCost;
+        
+        // Calculate 30% for DP
+        $dpAmount = $total * 0.3;
+        
+        $set('dp_amount', round($dpAmount, 2));
     }
 
     public static function table(Table $table): Table
@@ -152,17 +203,26 @@ class OfferingResource extends Resource
                     ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
-                // TextColumn::make('quantity')
-                //     ->numeric(),
-                // TextColumn::make('unit_price')
-                //     ->money('IDR'),
                 TextColumn::make('offer')
                     ->money('IDR'),
+                TextColumn::make('delivery_cost')
+                    ->money('IDR'),
+                TextColumn::make('payment_type')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'dp' => 'info',
+                        'full' => 'success',
+                    }),
+                TextColumn::make('dp_amount')
+                    ->money('IDR')
+                    ->visible(fn ($record) => $record?->payment_type === 'dp'),
                 TextColumn::make('offering_status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'accepted' => 'success',
                         'rejected' => 'danger',
+                        'cancelled' => 'gray',
+                        'completed' => 'success',
                         default => 'warning',
                     }),
             ])
@@ -181,9 +241,9 @@ class OfferingResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->visible(fn (Offering $record) => $record->offering_status !== 'accepted'),
+                    ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn (Offering $record) => $record->offering_status !== 'accepted'),
+                    ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
                 Action::make('accept')
                     ->label('Accept')
                     ->color('success')
@@ -217,12 +277,26 @@ class OfferingResource extends Resource
                     !\App\Models\Delivery::where('tender_id', $record->tender_id)
                              ->where('vendor_id', $record->vendor_id)
                              ->exists()
-                )
+                    )
                     ->url(fn (Offering $record) => route('filament.admin.resources.deliveries.create', [
                         'tender_id' => $record->tender_id,
                         'vendor_id' => $record->vendor_id
-                    ]))
-                    ,
+                    ])),
+                Action::make('create_payment')
+                    ->label('Create Payment')
+                    ->color('primary')
+                    ->icon('heroicon-o-truck')
+                    ->visible(fn (Offering $record) => 
+                        auth()->user()->role === 'Admin' && 
+                        $record->offering_status === 'accepted' &&
+                        !\App\Models\Payment::where('tender_id', $record->tender_id)
+                            ->where('vendor_id', $record->vendor_id)
+                            ->exists()
+                    )
+                    ->url(fn (Offering $record) => route('filament.admin.resources.payments.create', [
+                        'tender_id' => $record->tender_id,
+                        'vendor_id' => $record->vendor_id
+                    ])),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

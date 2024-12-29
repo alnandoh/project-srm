@@ -46,7 +46,12 @@ class DeliveryPolicy
      */
     public function update(User $user, Delivery $delivery): bool
     {
-        return $user->role === 'Vendor' && $user->id === $delivery->vendor_id;
+        if ($user->role === 'Vendor') {
+            return $user->id === $delivery->vendor_id;
+        }
+
+        // Allow admin to update delivery status and QC
+        return $user->role === 'Admin';
     }
 
     /**

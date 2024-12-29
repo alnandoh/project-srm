@@ -23,12 +23,15 @@ class RatingRelationManager extends RelationManager
             ->schema([
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
+                    ->default(request()->query('vendor_id'))
                     ->required(),
                 Select::make('tender_id')
                     ->relationship('tender', 'name')
+                    ->default(request()->query('tender_id'))
                     ->required(),
                 Select::make('offering_id')
                     ->relationship('offering', 'title')
+                    ->default(request()->query('offering_id'))
                     ->required(),
                 TextInput::make('work_quality')
                     ->required()
