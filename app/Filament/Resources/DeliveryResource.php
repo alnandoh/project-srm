@@ -28,7 +28,7 @@ class DeliveryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?int $navigationSort = 3;
-
+    
     public static function form(Form $form): Form
     {
         $user = auth()->user();
@@ -79,6 +79,7 @@ class DeliveryResource extends Resource
                     ->disabled(fn () => $user->role === 'Vendor' || $isEdit),
                 TextInput::make('shipping_track_number')
                     ->required()
+                    ->disabled($user->role == 'Admin')
                     ->maxLength(255),
                 Select::make('courier')
                     ->options([
@@ -89,11 +90,12 @@ class DeliveryResource extends Resource
                         'POS' => 'POS Indonesia',
                     ])
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->disabled(fn () => $isEdit || $user->role === 'Admin'),
 
                 Select::make('status')
                     ->options([
-                        'pending_payment' => 'Pending Payment',
+                        'pending' => 'Pending',
                         'shipped' => 'Shipped',
                         'delivered' => 'Delivered',
                         'confirmed' => 'Confirmed',
@@ -127,6 +129,7 @@ class DeliveryResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $user = auth()->user();
         return $table
             ->columns([
                 TextColumn::make('tender.name')
@@ -137,9 +140,20 @@ class DeliveryResource extends Resource
                     ->searchable(),
                 TextColumn::make('courier')
                     ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable(),
+                TextColumn::make('status')
+                    ->searchable()
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'info',
+                        'shipped' => 'gray',
+                        'cancelled' => 'gray',
+                        'confirmed' => 'success',
+                        default => 'warning',
+                    }),
+                TextColumn::make('courier')
+                    ->searchable(),
+                TextColumn::make('quantity_received')
+                ->hidden($user->role !== 'Admin'),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([

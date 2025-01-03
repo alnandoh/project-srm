@@ -19,6 +19,15 @@ class Delivery extends Model
         'shipping_track_number',
         'courier',
         'status',
+        'quantity_received',
+        'quality_check',
+        'quantity_check',
+        'qc_notes'
+    ];
+
+    protected $casts = [
+        'quality_check' => 'boolean',
+        'quantity_check' => 'boolean',
     ];
 
     public function tender()
