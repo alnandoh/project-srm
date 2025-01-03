@@ -20,14 +20,15 @@ class CreateOffering extends CreateRecord
     {
         parent::mount();
 
-        // Get tender_id from query parameters
         $tenderId = request()->query('tender_id');
         if ($tenderId) {
             $tender = Tender::find($tenderId);
             if ($tender) {
-                // Set the max_budget when mounting the form
                 $this->form->fill([
                     'tender_id' => $tenderId,
+                    'food_type' => $tender->food_type,
+                    'quantity' => $tender->quantity,
+                    'note' => $tender->note,
                     'max_budget' => $tender->budget,
                 ]);
             }

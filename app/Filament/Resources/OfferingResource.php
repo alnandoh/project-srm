@@ -14,6 +14,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Exists;
@@ -22,6 +23,7 @@ use Filament\Forms\Components\Get;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Grid;
+use Illuminate\Support\Facades\Storage;
 
 class OfferingResource extends Resource
 {
@@ -32,6 +34,12 @@ class OfferingResource extends Resource
     public static function form(Form $form): Form
     {
         $user = auth()->user();
+        $tenderId = request()->query('tender_id');
+        $tenderInfo = null;
+        
+        if ($tenderId) {
+            $tenderInfo = \App\Models\Tender::find($tenderId);
+        }
 
         if ($user->role === 'Admin') {
             // Admin can only update status
@@ -83,24 +91,44 @@ class OfferingResource extends Resource
             ->schema([
                 Section::make('Tender Information')
                     ->schema([
-                        Select::make('tender_id')
-                            ->relationship('tender', 'name')
-                            ->default(request()->query('tender_id'))
-                            ->required()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                if ($state) {
-                                    $tender = \App\Models\Tender::find($state);
-                                    if ($tender) {
-                                        $set('max_budget', $tender->budget);
-                                    }
-                                }
-                            }),
-                        Select::make('vendor_id')
-                            ->relationship('vendor', 'name')
-                            ->default(fn () => Auth::id())
-                            ->required()
-                            ->hidden(),
-                    ]),
+                    Grid::make(2)
+                        ->schema([
+                Select::make('tender_id')
+                    ->relationship('tender', 'name')
+                    ->default($tenderId)
+                    ->required()
+                    ->disabled()
+                    ->dehydrated()
+                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                        if ($state) {
+                            $tender = \App\Models\Tender::find($state);
+                            if ($tender) {
+                                $set('max_budget', $tender->budget);
+                            }
+                        }
+                    }),
+                TextInput::make('food_type')
+                    ->default($tenderInfo?->food_type)
+                    ->label('Food Type')
+                    ->disabled()
+                    ->dehydrated(false),
+                TextInput::make('quantity')
+                    ->default($tenderInfo?->quantity)
+                    ->label('Required Quantity')
+                    ->disabled()
+                    ->dehydrated(false),
+                TextInput::make('max_budget')
+                    ->default($tenderInfo?->max_budget)
+                    ->label('Maximum Budget')
+                    ->prefix('IDR')
+                    ->disabled()
+                    ->dehydrated(false),]),
+                Select::make('vendor_id')
+                    ->relationship('vendor', 'name')
+                    ->default(fn () => Auth::id())
+                    ->required()
+                    ->hidden(),
+                ]),
 
                 Section::make('Offering Details')
                     ->schema([
@@ -203,6 +231,13 @@ class OfferingResource extends Resource
                     ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
+                ImageColumn::make('image')
+                    ->getStateUsing(fn ($record) => $record->image)
+                    ->url(fn ($record) => $record->image 
+                        ? Storage::url($record->image) 
+                        : null)
+                    ->width(100)
+                    ->height(100),
                 TextColumn::make('offer')
                     ->money('IDR'),
                 TextColumn::make('delivery_cost')
@@ -244,28 +279,28 @@ class OfferingResource extends Resource
                     ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
                 Tables\Actions\DeleteAction::make()
                     ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
-                Action::make('accept')
-                    ->label('Accept')
-                    ->color('success')
-                    ->icon('heroicon-o-check')
-                    ->requiresConfirmation()
-                    ->visible(fn (Offering $record) => 
-                        auth()->user()->role === 'Admin' && 
-                        $record->offering_status === 'pending'
-                    )
-                    ->action(function (Offering $record) {
-                        $offerings = Offering::where('tender_id', $record->tender_id)->get();
+                // Action::make('accept')
+                //     ->label('Accept')
+                //     ->color('success')
+                //     ->icon('heroicon-o-check')
+                //     ->requiresConfirmation()
+                //     ->visible(fn (Offering $record) => 
+                //         auth()->user()->role === 'Admin' && 
+                //         $record->offering_status === 'pending'
+                //     )
+                //     ->action(function (Offering $record) {
+                //         $offerings = Offering::where('tender_id', $record->tender_id)->get();
 
-                        \DB::transaction(function () use ($record, $offerings) {
-                            $record->update(['offering_status' => 'accepted']);
+                //         \DB::transaction(function () use ($record, $offerings) {
+                //             $record->update(['offering_status' => 'accepted']);
 
-                            foreach ($offerings as $offering) {
-                                if ($offering->id !== $record->id) {
-                                    $offering->update(['offering_status' => 'cancelled']);
-                                }
-                            }
-                        });
-                    }),
+                //             foreach ($offerings as $offering) {
+                //                 if ($offering->id !== $record->id) {
+                //                     $offering->update(['offering_status' => 'cancelled']);
+                //                 }
+                //             }
+                //         });
+                //     }),
                 Action::make('create_delivery')
                     ->label('Create Delivery')
                     ->color('primary')
