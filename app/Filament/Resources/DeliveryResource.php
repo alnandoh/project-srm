@@ -41,34 +41,34 @@ class DeliveryResource extends Resource
                     ->relationship(
                         'tender',
                         'name',
-                        function (Builder $query) use ($user) {
-                            if ($user->role === 'Vendor') {
-                                $query->whereHas('offering', function ($query) use ($user) {
-                                    $query->where('vendor_id', $user->id)
-                                        ->where('offering_status', 'accepted');
-                                        // ->where(function ($q) {
-                                        //     $q->where('dp_paid', true)
-                                        //       ->orWhere('full_paid', true);
-                                        // });
-                                });
-                            }
-                        }
+                        // function (Builder $query) use ($user) {
+                        //     if ($user->role === 'Vendor') {
+                        //         $query->whereHas('offering', function ($query) use ($user) {
+                        //             $query->where('vendor_id', $user->id)
+                        //                 ->where('offering_status', 'accepted')
+                        //                 ->where(function ($q) {
+                        //                     $q->where('dp_paid', true)
+                        //                       ->orWhere('full_paid', true);
+                        //                 });
+                        //         });
+                        //     }
+                        // }
                     )
                     ->default($tenderId)
                     ->required()
-                    ->disabled(fn () => $tenderId !== null || $isEdit)
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        if ($state) {
-                            $offering = \App\Models\Offering::where('tender_id', $state)
-                                ->where('vendor_id', auth()->id())
-                                ->where('offering_status', 'accepted')
-                                ->first();
+                    ->disabled(fn () => $tenderId !== null || $isEdit),
+                    // ->afterStateUpdated(function ($state, callable $set) {
+                    //     if ($state) {
+                    //         $offering = \App\Models\Offering::where('tender_id', $state)
+                    //             ->where('vendor_id', auth()->id())
+                    //             ->where('offering_status', 'accepted')
+                    //             ->first();
                             
-                            if ($offering) {
-                                $set('offering_id', $offering->id);
-                            }
-                        }
-                    }),
+                    //         if ($offering) {
+                    //             $set('offering_id', $offering->id);
+                    //         }
+                    //     }
+                    // }),
 
                 Hidden::make('offering_id'),
 
@@ -79,7 +79,7 @@ class DeliveryResource extends Resource
                     ->disabled(fn () => $user->role === 'Vendor' || $isEdit),
                 TextInput::make('shipping_track_number')
                     ->required()
-                    ->disabled($user->role == 'Admin')
+                    ->disabled($user->role === 'Admin')
                     ->maxLength(255),
                 Select::make('courier')
                     ->options([
@@ -98,10 +98,10 @@ class DeliveryResource extends Resource
                         'pending' => 'Pending',
                         'shipped' => 'Shipped',
                         'delivered' => 'Delivered',
-                        'confirmed' => 'Confirmed',
                     ])
-                    ->default('pending')
+                    ->default('shipped')
                     ->required()
+                    ->dehydrated(true)
                     ->visible($user->role === 'Admin')
                     ->disabled($user->role !== 'Admin'),
 
@@ -111,13 +111,7 @@ class DeliveryResource extends Resource
 
                 Toggle::make('quality_check')
                     ->visible($user->role === 'Admin')
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        if ($state) {
-                            // Trigger creation of full payment when QC is approved
-                            // Implementation here
-                        }
-                    }),
+                    ->reactive(),
 
                 Toggle::make('quantity_check')
                     ->visible($user->role === 'Admin'),
@@ -146,8 +140,7 @@ class DeliveryResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'info',
                         'shipped' => 'gray',
-                        'cancelled' => 'gray',
-                        'confirmed' => 'success',
+                        'delivered' => 'success',
                         default => 'warning',
                     }),
                 TextColumn::make('courier')
@@ -164,12 +157,12 @@ class DeliveryResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 $user = Auth::user();
                 if ($user->role === 'Vendor') {
-                    // Filter offerings by the current user's ID in the vendor_id column
                     $query->where('vendor_id', $user->id);
                 }
             })
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (Delivery $record) => $record->status !== "delivered"),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
