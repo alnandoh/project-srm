@@ -24,7 +24,7 @@ return new class extends Migration
             $table->integer('quantity_received')->nullable();
             $table->boolean('quality_check')->default(false);
             $table->boolean('quantity_check')->default(false);
-            $table->enum('status', ['pending_payment', 'shipped', 'delivered', 'confirmed'])->default('pending_payment');
+            $table->enum('status', ['pending', 'shipped', 'delivered'])->default('pending');
             $table->timestamps();
             $table->softDeletes();
         });

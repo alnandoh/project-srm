@@ -20,6 +20,8 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Collection;
+use Filament\Notifications\Notification;
 
 class PaymentResource extends Resource
 {
@@ -30,6 +32,9 @@ class PaymentResource extends Resource
 
     public static function form(Form $form): Form
     {
+        $tenderId = request()->query('tender_id');
+        $vendorId = request()->query('vendor_id');
+        
         return $form
             ->schema([
                 Select::make('admin_id')
@@ -39,18 +44,27 @@ class PaymentResource extends Resource
                     ->hidden(),
                 Select::make('tender_id')
                     ->relationship('tender', 'name')
-                    ->default(request()->query('tender_id'))
-                    ->required(),
+                    ->default($tenderId)
+                    ->disabled()
+                    ->required()
+                    ->dehydrated(true),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
-                    ->default(request()->query('vendor_id'))
-                    ->required(),
+                    ->default($vendorId)
+                    ->disabled()
+                    ->required()
+                    ->dehydrated(true),
                 FileUpload::make('invoice_image')
                     ->image()
                     ->directory('invoices')
                     ->disk('public')
+                    ->disabled(
+                        fn (Forms\Get $get): bool => $get('payment_status') === true)
                     ->storeFiles(true),
                 Toggle::make('payment_status')
+                    ->disabled(
+                        fn (Forms\Get $get): bool => $get('payment_status') === true && $get('id') !== null)
+                    ->dehydrated()
                     ->required(),
             ]);
     }
@@ -83,12 +97,17 @@ class PaymentResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (Payment $record) => $record->payment_status === false),
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->hidden(fn (?Collection $records) => 
+                            $records === null || 
+                            $records->contains('payment_status', true)
+                        ),
                 ]),
             ]);
     }

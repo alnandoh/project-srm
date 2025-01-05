@@ -25,7 +25,7 @@ return new class extends Migration
             $table->boolean('dp_paid')->default(false);
             $table->boolean('full_paid')->default(false);
             $table->enum('offering_status', [
-                'pending', 'accepted', 'rejected', 'cancelled', 'completed'
+                'pending', 'accepted', 'rejected',
             ])->default('pending');
             $table->timestamps();
             $table->softDeletes();

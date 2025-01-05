@@ -36,10 +36,14 @@ class OfferingResource extends Resource
         $user = auth()->user();
         $tenderId = request()->query('tender_id');
         $tenderInfo = null;
-        
+        $record = $form->getRecord();
+
         if ($tenderId) {
             $tenderInfo = \App\Models\Tender::find($tenderId);
         }
+
+        $tenderInfo = $record ? $record->tender : ($tenderId ? \App\Models\Tender::find($tenderId) : null);
+        $maxBudget = $tenderInfo ? $tenderInfo->budget : 0;
 
         if ($user->role === 'Admin') {
             // Admin can only update status
@@ -79,9 +83,12 @@ class OfferingResource extends Resource
                     ->schema([
                         Select::make('offering_status')
                             ->options([
+                                'pending' => 'Pending',
                                 'accepted' => 'Accepted',
                                 'rejected' => 'Rejected',
                             ])
+                            ->disabled(fn (Forms\Get $get): bool => $get('offering_status') !== 'pending')
+                            ->dehydrated() // Add this line to ensure the value is included in submission
                             ->required(),
                     ]),
             ]);
@@ -99,6 +106,7 @@ class OfferingResource extends Resource
                     ->required()
                     ->disabled()
                     ->dehydrated()
+                    ->live()
                     ->afterStateUpdated(function ($state, Forms\Set $set) {
                         if ($state) {
                             $tender = \App\Models\Tender::find($state);
@@ -122,20 +130,24 @@ class OfferingResource extends Resource
                     ->label('Maximum Budget')
                     ->prefix('IDR')
                     ->disabled()
-                    ->dehydrated(false),]),
+                    ->dehydrated(),]),
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
                     ->default(fn () => Auth::id())
                     ->required()
                     ->hidden(),
                 ]),
+                Hidden::make('max_budget')
+                        ->default($tenderInfo?->budget), 
 
                 Section::make('Offering Details')
                     ->schema([
                         TextInput::make('title')
+                            ->disabled($user->role === 'Admin')
                             ->required()
                             ->maxLength(255),
                         Textarea::make('description')
+                            ->disabled($user->role === 'Admin')
                             ->maxLength(255)
                             ->required(),
                         Grid::make(2)
@@ -144,11 +156,12 @@ class OfferingResource extends Resource
                                     ->required()
                                     ->numeric()
                                     ->prefix('IDR')
-                                    // ->live()
+                                    ->live()
+                                    ->default($maxBudget)
                                     ->rules([
                                         function (Forms\Get $get) {
                                             return function ($attribute, $value, $fail) use ($get) {
-                                                $maxBudget = $get('max_budget');
+                                                $maxBudget = floatval($get('max_budget'));
                                                 if ($value > $maxBudget) {
                                                     $fail("The offer cannot exceed the tender budget of IDR " . number_format($maxBudget, 2));
                                                 }
@@ -157,16 +170,18 @@ class OfferingResource extends Resource
                                     ])
                                     ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => 
                                         self::calculateTotalAndDP($state, $get('delivery_cost'), $set)
-                                    ),
+                                    )
+                                    ->disabled($user->role === 'Admin'),
                                 TextInput::make('delivery_cost')
                                     ->required()
                                     ->numeric()
                                     ->default(0)
                                     ->prefix('IDR')
-                                    // ->live()
+                                    ->live()
                                     ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => 
                                         self::calculateTotalAndDP($get('offer'), $state, $set)
-                                    ),
+                                    )
+                                    ->disabled($user->role === 'Admin'),
                             ]),
                         FileUpload::make('image')
                             ->image()
@@ -185,7 +200,8 @@ class OfferingResource extends Resource
                             ->live()
                             ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => 
                                 self::calculateTotalAndDP($get('offer'), $get('delivery_cost'), $set)
-                            ),
+                            )
+                            ->disabled($user->role === 'Admin'),
                         TextInput::make('dp_amount')
                             ->numeric()
                             ->prefix('IDR')
@@ -203,8 +219,8 @@ class OfferingResource extends Resource
                             ->default('pending')
                             ->hidden()
                             ->required(),
-                    ]),
-            ]);
+                    ])
+                ]);
     }
 
     private static function calculateTotalAndDP($offer, $deliveryCost, Forms\Set $set): void
@@ -256,8 +272,6 @@ class OfferingResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'accepted' => 'success',
                         'rejected' => 'danger',
-                        'cancelled' => 'gray',
-                        'completed' => 'success',
                         default => 'warning',
                     }),
             ])
@@ -275,10 +289,10 @@ class OfferingResource extends Resource
             })
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
-                Tables\Actions\DeleteAction::make()
-                    ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
+                // Tables\Actions\EditAction::make()
+                //     ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
+                // Tables\Actions\DeleteAction::make()
+                //     ->visible(fn (Offering $record) => $record->offering_status === 'pending'),
                 // Action::make('accept')
                 //     ->label('Accept')
                 //     ->color('success')
@@ -320,7 +334,7 @@ class OfferingResource extends Resource
                 Action::make('create_payment')
                     ->label('Create Payment')
                     ->color('primary')
-                    ->icon('heroicon-o-truck')
+                    ->icon('heroicon-o-currency-dollar')
                     ->visible(fn (Offering $record) => 
                         auth()->user()->role === 'Admin' && 
                         $record->offering_status === 'accepted' &&
@@ -328,10 +342,13 @@ class OfferingResource extends Resource
                             ->where('vendor_id', $record->vendor_id)
                             ->exists()
                     )
-                    ->url(fn (Offering $record) => route('filament.admin.resources.payments.create', [
-                        'tender_id' => $record->tender_id,
-                        'vendor_id' => $record->vendor_id
-                    ])),
+                    ->url(fn (Offering $record): string => 
+                        route('filament.admin.resources.payments.create', [
+                            'tender_id' => $record->tender_id,
+                            'vendor_id' => $record->vendor_id
+                        ])
+                    ),
+                
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

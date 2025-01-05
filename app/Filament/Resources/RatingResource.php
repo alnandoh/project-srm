@@ -33,13 +33,13 @@ class RatingResource extends Resource
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name')
                     ->required()
-                    ->default(fn () => $user->role === 'Vendor' ? $user->id : null)
-                    ->disabled(fn () => $user->role === 'Vendor'),
+                    ->default(fn () => Auth::id())
+                    ->disabled(),
                 
                 Select::make('tender_id')
                     ->relationship('tender', 'name', function (Builder $query) use ($user) {
                         $query->whereHas('delivery', function ($q) use ($user) {
-                            $q->where('status', 'confirmed');
+                            $q->where('status', 'delivered');
                             if ($user->role === 'Vendor') {
                                 $q->where('vendor_id', $user->id);
                             }

@@ -17,6 +17,7 @@ class CreateDelivery extends CreateRecord
     protected function handleRecordCreation(array $data): Delivery
     {
         $data['vendor_id'] = Auth::id();
+        $data['status'] = 'shipped';
         return static::getModel()::create($data);
     }
 
