@@ -8,6 +8,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Component;
 use DanHarrin\LivewireRateLimiting\WithRateLimiting;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use Filament\Notifications\Notification;
 
 class ResetPassword extends RequestPasswordReset
 {
@@ -37,16 +40,29 @@ class ResetPassword extends RequestPasswordReset
     public function request(): void
     {
         $data = $this->form->getState();
+        
+        // Find the user
+        $user = User::where('email', $data['email'])->first();
+        
+        if ($user) {
+            // Set the new password
+            $newPassword = '123456ab';
+            $user->password = Hash::make($newPassword);
+            $user->save();
 
-        $status = Password::sendResetLink(
-            $data
-        );
-
-        if ($status === Password::RESET_LINK_SENT) {
-            $this->notify('success', __($status));
+            Notification::make()
+                ->success()
+                ->title('Success')
+                ->body('Password has been reset successfully. Your new password is: ' . $newPassword)
+                ->send();
+            
             $this->redirect(route('filament.admin.auth.login'));
         } else {
-            $this->notify('danger', __($status));
+            Notification::make()
+                ->danger()
+                ->title('Error')
+                ->body('We could not find a user with that email address.')
+                ->send();
         }
     }
 }
